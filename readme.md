@@ -11,6 +11,7 @@ This is the Arduino side implementation for our Leap Motion Controlled Armed Car
 - Click **Open Project** and select this project folder
   - **PlatformIO** will automatically create a **Visual Studio Code Workspace** (supposedly...)
 - Navigate to **PlatformIO Home** again, click **Library** to install the libraries required by this project (I'm not sure whether **PlatformIO** will automatically install them for you so you should check this before building your project)
+- Click on **Platforms** tab of **PlatformIO Home**, then install **Atmel AVR** (honestly I don't know what this is...)
 - Then click the **check mark** under your **Visual Studio Code** to build the project, if all went well you're receive no errors.
 - Now you should be ready to **upload** to compiled binary to your Arduino.
   - Go to `platformio.ini` and change the `upload_port` to your desired port (Maybe try uploading through bluetooth? I don't know)
