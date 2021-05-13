@@ -16,3 +16,9 @@ This is the Arduino side implementation for our Leap Motion Controlled Armed Car
 - Now you should be ready to **upload** to compiled binary to your Arduino.
   - Go to `platformio.ini` and change the `upload_port` to your desired port (Maybe try uploading through bluetooth? I don't know)
   - Then, just click the **right arrow** under your **Visual Studio Code** to upload the binary to your board
+
+### Bluetooth Port
+
+**Windows**:
+
+- Control Panel -> Search for **Bluetooth** -> Click **Change Bluetooth Settings** -> Click **COM Ports** -> Find your BT04 Port
