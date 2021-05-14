@@ -4,5 +4,13 @@
             "path": "."
         }
     ],
-    "settings": {}
+    "settings": {
+        "files.associations": {
+            "*.asm": "masm",
+            "*.vf": "verilog",
+            "*.v": "systemverilog",
+            "*.json": "json",
+            "pins_arduino.h": "c"
+        }
+    }
 }

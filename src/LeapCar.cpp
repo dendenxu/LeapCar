@@ -1,9 +1,10 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <Servo.h>
+// #include <Servo.h>
+#include <ServoTimer2.h>
 #include <StreamUtils.h>
 
-Servo clamp_servo, arm_top_servo, arm_middle_servo, arm_bottom_servo;  // create servo object to control a servo
+ServoTimer2 clamp_servo, arm_top_servo, arm_middle_servo, arm_bottom_servo;  // create servo object to control a servo
 const int SERVOS_COUNT = 4;                                            //舵机数4个
 int value[SERVOS_COUNT], idle[SERVOS_COUNT], current_angle[SERVOS_COUNT], MIN[SERVOS_COUNT], MAX[SERVOS_COUNT], INITANGLE[SERVOS_COUNT], previous_angle[SERVOS_COUNT], ANA[SERVOS_COUNT];
 
@@ -13,7 +14,7 @@ int value[SERVOS_COUNT], idle[SERVOS_COUNT], current_angle[SERVOS_COUNT], MIN[SE
 int servo_rotation_delta = 5;         // 舵机转动幅度
 int servo_bottom_rotation_delta = 2;  // 底座舵机转动幅度
 char command;                         // read the char
-DynamicJsonDocument message(2048);    // json message
+DynamicJsonDocument message(1024);    // json message
 double voltage[MOTOR_VOLTAGE_PIN_CNT];
 
 //---------------------------------手爪函数定义---------------------------------------
@@ -80,24 +81,60 @@ void arm_stop_all()  //停止所有舵机
 //---------------------------------运动函数定义---------------------------------------
 void motor_forve_vector(const double *vector)
 {
+    Serial.print("Analog writing: ");
+    for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
+        Serial.print(vector[i], 2);
+        Serial.print(", ");
+    }
+    Serial.print("\n");
     analogWrite(8, vector[0]);
+    // digitalWrite(8, HIGH);
     analogWrite(9, vector[1]);
 
     analogWrite(11, vector[2]);
+    // digitalWrite(11, HIGH);
     analogWrite(10, vector[3]);
+    // for (int i = 0; i < 255; i++) {
+    //     analogWrite(9, i);
+    //     analogWrite(10, i);
+    //     delay(20);
+    // }
+    // for (int i = 255; i >= 0; i--) {
+    //     analogWrite(9, i);
+    //     analogWrite(10, i);
+    //     delay(20);
+    // }
 }
 
 void setup()
 {
     // put your setup code here, to run once:
-    Serial.begin(115200);  //The monitor UART
+    Serial.begin(9600);  //The monitor UART
     while (!Serial)
         continue;
+    Serial.println("Serial setup");
+    Serial.println("Setup begin...");
     //-----电机IO口定-
     pinMode(8, OUTPUT);
     pinMode(9, OUTPUT);
     pinMode(10, OUTPUT);
     pinMode(11, OUTPUT);
+
+    // Analog
+    // pinMode(14, OUTPUT);
+    // pinMode(15, OUTPUT);
+    // pinMode(16, OUTPUT);
+    // pinMode(17, OUTPUT);
+    // pinMode(18, OUTPUT);
+    // pinMode(19, OUTPUT);
+
+    // analogWrite(14, 32);
+    // analogWrite(15, 32);
+    // analogWrite(16, 32);
+    // analogWrite(17, 32);
+    // analogWrite(18, 32);
+    // analogWrite(19, 32);
+    pinMode(17, OUTPUT);
 
     //机械手爪定义端口
     clamp_servo.attach(2);        //手爪电机
@@ -135,16 +172,40 @@ void setup()
     current_angle[1] = INITANGLE[1];
     current_angle[2] = INITANGLE[2];
     current_angle[3] = INITANGLE[3];
+
+    Serial.println("Setup finished...");
 }
 
 void loop()
 {
+    for (int i = 0; i < 255; i++) {
+        analogWrite(17, i);
+        delay(20);
+    }
+    for (int i = 255; i >= 0; i--) {
+        analogWrite(17, i);
+        delay(20);
+    }
+    // int val9 = analogRead(9);
+    // int val10 = analogRead(10);
+    // int val14 = analogRead(14);
+    // int val15 = analogRead(15);
+
+    // Serial.print(val9);
+    // Serial.print(", ");
+    // Serial.print(val10);
+    // Serial.print(", ");
+    // Serial.print(val14);
+    // Serial.print(", ");
+    // Serial.print(val15);
+    // Serial.print("\n");
     // put your main code here, to run repeatedly:
-    ReadLoggingStream loggingStream(Serial, Serial);
+    // Serial.println("Loop begin...");
+    // ReadLoggingStream loggingStream(Serial, Serial);
     DeserializationError error = deserializeJson(message, Serial);
     // Test if parsing succeeds.
     if (error) {
-        Serial.print(F("deserializeJson() failed: "));
+        Serial.print("deserializeJson() failed: ");
         Serial.println(error.f_str());
         return;
     }
