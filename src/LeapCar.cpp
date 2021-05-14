@@ -1,11 +1,13 @@
+#define START_EASE_TO_SPEED 50
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
-// #include <Servo.h>
-#include <ServoTimer2.h>
+#include <Servo.h>
+#include <ServoEasing.h>
 #include <StreamUtils.h>
 
-ServoTimer2 clamp_servo, arm_top_servo, arm_middle_servo, arm_bottom_servo;  // create servo object to control a servo
-const int SERVOS_COUNT = 4;                                            //舵机数4个
+ServoEasing clamp_servo, arm_top_servo, arm_middle_servo, arm_bottom_servo;  // create servo object to control a servo
+const int SERVOS_COUNT = 4;                                                  //舵机数4个
 int value[SERVOS_COUNT], idle[SERVOS_COUNT], current_angle[SERVOS_COUNT], MIN[SERVOS_COUNT], MAX[SERVOS_COUNT], INITANGLE[SERVOS_COUNT], previous_angle[SERVOS_COUNT], ANA[SERVOS_COUNT];
 
 #define SERVO_UPDATE_DELAY 50
@@ -20,13 +22,13 @@ double voltage[MOTOR_VOLTAGE_PIN_CNT];
 //---------------------------------手爪函数定义---------------------------------------
 void clamp_open()  //手爪打开
 {
-    clamp_servo.write(MAX[0]);
+    clamp_servo.easeTo(MAX[0]);
     delay(300);
 }
 
 void clamp_close()
 {
-    clamp_servo.write(MIN[0]);  //手爪闭合
+    clamp_servo.easeTo(MIN[0]);  //手爪闭合
     delay(300);
 }
 void bottom_rotate_left()  // 底座左转
@@ -34,49 +36,49 @@ void bottom_rotate_left()  // 底座左转
     if (current_angle[3] + servo_bottom_rotation_delta < MAX[3]) {
         current_angle[3] += servo_bottom_rotation_delta;
     }
-    arm_bottom_servo.write(current_angle[3]);
+    arm_bottom_servo.easeTo(current_angle[3]);
 }
 
 void bottom_rotate_right()  // 底座右转
 {
     if (current_angle[3] - servo_bottom_rotation_delta > MIN[3])
         current_angle[3] -= servo_bottom_rotation_delta;
-    arm_bottom_servo.write(current_angle[3]);
+    arm_bottom_servo.easeTo(current_angle[3]);
 }
 
 void arm_top_up()  //上臂舵机向上
 {
     if (current_angle[1] + servo_rotation_delta < MAX[1])
         current_angle[1] += servo_rotation_delta;
-    arm_top_servo.write(current_angle[1]);
+    arm_top_servo.easeTo(current_angle[1]);
 }
 
 void arm_top_down()  //上臂舵机向下
 {
     if (current_angle[1] - servo_rotation_delta > MIN[1])
         current_angle[1] -= servo_rotation_delta;
-    arm_top_servo.write(current_angle[1]);
+    arm_top_servo.easeTo(current_angle[1]);
 }
 
 void arm_middle_up()  //下臂舵机上升
 {
     if (current_angle[2] - servo_rotation_delta > MIN[2])
         current_angle[2] -= servo_rotation_delta;
-    arm_middle_servo.write(current_angle[2]);
+    arm_middle_servo.easeTo(current_angle[2]);
 }
 
 void arm_middle_down()  //下臂舵机下降
 {
     if (current_angle[2] + servo_rotation_delta < MAX[2])
         current_angle[2] += servo_rotation_delta;
-    arm_middle_servo.write(current_angle[2]);
+    arm_middle_servo.easeTo(current_angle[2]);
 }
 void arm_stop_all()  //停止所有舵机
 {
-    clamp_servo.write(current_angle[0]);
-    arm_top_servo.write(current_angle[1]);
-    arm_middle_servo.write(current_angle[2]);
-    arm_bottom_servo.write(current_angle[3]);
+    clamp_servo.easeTo(current_angle[0]);
+    arm_top_servo.easeTo(current_angle[1]);
+    arm_middle_servo.easeTo(current_angle[2]);
+    arm_bottom_servo.easeTo(current_angle[3]);
 }
 //---------------------------------运动函数定义---------------------------------------
 void motor_forve_vector(const double *vector)
@@ -163,10 +165,10 @@ void setup()
     INITANGLE[3] = 90;
 
     //初始化电机
-    clamp_servo.write(INITANGLE[0]);
-    arm_top_servo.write(INITANGLE[1]);
-    arm_middle_servo.write(INITANGLE[2]);
-    arm_bottom_servo.write(INITANGLE[3]);
+    clamp_servo.easeTo(INITANGLE[0]);
+    arm_top_servo.easeTo(INITANGLE[1]);
+    arm_middle_servo.easeTo(INITANGLE[2]);
+    arm_bottom_servo.easeTo(INITANGLE[3]);
 
     current_angle[0] = INITANGLE[0];
     current_angle[1] = INITANGLE[1];
@@ -201,8 +203,10 @@ void loop()
     // Serial.print("\n");
     // put your main code here, to run repeatedly:
     // Serial.println("Loop begin...");
-    // ReadLoggingStream loggingStream(Serial, Serial);
-    DeserializationError error = deserializeJson(message, Serial);
+    Serial.println("Deserialization began...");
+    ReadLoggingStream loggingStream(Serial, Serial);
+    DeserializationError error = deserializeJson(message, loggingStream);
+    Serial.println("Deserialization ended...");
     // Test if parsing succeeds.
     if (error) {
         Serial.print("deserializeJson() failed: ");

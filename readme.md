@@ -14,7 +14,7 @@ This is the Arduino side implementation for our Leap Motion Controlled Armed Car
 - Click on **Platforms** tab of **PlatformIO Home**, then install **Atmel AVR** (honestly I don't know what this is...)
 - Then click the **check mark** under your **Visual Studio Code** to build the project, if all went well you're receive no errors.
 - Now you should be ready to **upload** to compiled binary to your Arduino.
-  - Go to `platformio.ini` and change the `upload_port` to your desired port (Maybe try uploading through bluetooth? I don't know)
+  - Go to `platformio.ini` and change the `upload_port` to your desired port (Maybe try uploading through Bluetooth? I don't know)
   - Then, just click the **right arrow** under your **Visual Studio Code** to upload the binary to your board
 
 ### Bluetooth Port
@@ -22,3 +22,31 @@ This is the Arduino side implementation for our Leap Motion Controlled Armed Car
 **Windows**:
 
 - Control Panel -> Search for **Bluetooth** -> Click **Change Bluetooth Settings** -> Click **COM Ports** -> Find your BT04 Port
+
+## Important
+
+For f***'s sake, the `Servo` library doesn't work with `analogWrite` since they both uses the arduino timer. What a giant mess...
+
+Now we can temporarily fix that by some freaking hacking modifications.
+
+You'll need to locate the file `ServoTimers.h`
+
+Ctrl+Click on `Servo.h` to locate its source
+
+![image-20210514120319217](readme.assets/image-20210514120319217.png)
+
+Most likely in some `Documents/Arduino/libraries` directory.
+
+Then, find something similar to this and ctrl-click `ServoTimer.h`
+
+![image-20210514120429995](readme.assets/image-20210514120429995.png)
+
+You only need to modify the first `ServoTimers.h` since only that uses our architecture.
+
+I'm using Visual Studio Code so it highlights the defined and undefined stuff...
+
+In `ServoTimers.h` change this `_useTimer1` to `_useTimer3`
+
+![image-20210514120626750](readme.assets/image-20210514120626750.png)
+
+And you're done.
