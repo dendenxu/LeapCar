@@ -45,7 +45,7 @@ You only need to modify the first `ServoTimers.h` since only that uses our archi
 
 I'm using Visual Studio Code so it highlights the defined and undefined stuff...
 
-In `ServoTimers.h` change this `_useTimer1` to `_useTimer3`
+In `ServoTimers.h` change this `_useTimer1` to `_useTimer2`
 
 ![image-20210514120626750](readme.assets/image-20210514120626750.png)
 

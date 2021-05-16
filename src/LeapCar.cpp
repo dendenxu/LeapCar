@@ -1,13 +1,13 @@
-#define START_EASE_TO_SPEED 50
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <Servo.h>
-#include <ServoEasing.h>
+// #include <ServoEasing.h>
+// #include <ServoTimer2.h>
 #include <StreamUtils.h>
 
-ServoEasing clamp_servo, arm_top_servo, arm_middle_servo, arm_bottom_servo;  // create servo object to control a servo
-const int SERVOS_COUNT = 4;                                                  //舵机数4个
+Servo clamp_servo, arm_top_servo, arm_middle_servo, arm_bottom_servo;  // create servo object to control a servo
+const int SERVOS_COUNT = 4;                                            //舵机数4个
 int value[SERVOS_COUNT], idle[SERVOS_COUNT], current_angle[SERVOS_COUNT], MIN[SERVOS_COUNT], MAX[SERVOS_COUNT], INITANGLE[SERVOS_COUNT], previous_angle[SERVOS_COUNT], ANA[SERVOS_COUNT];
 
 #define SERVO_UPDATE_DELAY 50
@@ -16,19 +16,24 @@ int value[SERVOS_COUNT], idle[SERVOS_COUNT], current_angle[SERVOS_COUNT], MIN[SE
 int servo_rotation_delta = 5;         // 舵机转动幅度
 int servo_bottom_rotation_delta = 2;  // 底座舵机转动幅度
 char command;                         // read the char
-DynamicJsonDocument message(1024);    // json message
-double voltage[MOTOR_VOLTAGE_PIN_CNT];
+DynamicJsonDocument message(256);     // json message
+char str[256];
+int voltage[MOTOR_VOLTAGE_PIN_CNT];
+int prev_volt[MOTOR_VOLTAGE_PIN_CNT];
+int voltage_pins[] = {8, 9, 11, 10};
+
+const char* READY_FOR_MSG = "{ \"ready\": true }";
 
 //---------------------------------手爪函数定义---------------------------------------
 void clamp_open()  //手爪打开
 {
-    clamp_servo.easeTo(MAX[0]);
+    clamp_servo.write(MAX[0]);
     delay(300);
 }
 
 void clamp_close()
 {
-    clamp_servo.easeTo(MIN[0]);  //手爪闭合
+    clamp_servo.write(MIN[0]);  //手爪闭合
     delay(300);
 }
 void bottom_rotate_left()  // 底座左转
@@ -36,52 +41,52 @@ void bottom_rotate_left()  // 底座左转
     if (current_angle[3] + servo_bottom_rotation_delta < MAX[3]) {
         current_angle[3] += servo_bottom_rotation_delta;
     }
-    arm_bottom_servo.easeTo(current_angle[3]);
+    arm_bottom_servo.write(current_angle[3]);
 }
 
 void bottom_rotate_right()  // 底座右转
 {
     if (current_angle[3] - servo_bottom_rotation_delta > MIN[3])
         current_angle[3] -= servo_bottom_rotation_delta;
-    arm_bottom_servo.easeTo(current_angle[3]);
+    arm_bottom_servo.write(current_angle[3]);
 }
 
 void arm_top_up()  //上臂舵机向上
 {
     if (current_angle[1] + servo_rotation_delta < MAX[1])
         current_angle[1] += servo_rotation_delta;
-    arm_top_servo.easeTo(current_angle[1]);
+    arm_top_servo.write(current_angle[1]);
 }
 
 void arm_top_down()  //上臂舵机向下
 {
     if (current_angle[1] - servo_rotation_delta > MIN[1])
         current_angle[1] -= servo_rotation_delta;
-    arm_top_servo.easeTo(current_angle[1]);
+    arm_top_servo.write(current_angle[1]);
 }
 
 void arm_middle_up()  //下臂舵机上升
 {
     if (current_angle[2] - servo_rotation_delta > MIN[2])
         current_angle[2] -= servo_rotation_delta;
-    arm_middle_servo.easeTo(current_angle[2]);
+    arm_middle_servo.write(current_angle[2]);
 }
 
 void arm_middle_down()  //下臂舵机下降
 {
     if (current_angle[2] + servo_rotation_delta < MAX[2])
         current_angle[2] += servo_rotation_delta;
-    arm_middle_servo.easeTo(current_angle[2]);
+    arm_middle_servo.write(current_angle[2]);
 }
 void arm_stop_all()  //停止所有舵机
 {
-    clamp_servo.easeTo(current_angle[0]);
-    arm_top_servo.easeTo(current_angle[1]);
-    arm_middle_servo.easeTo(current_angle[2]);
-    arm_bottom_servo.easeTo(current_angle[3]);
+    clamp_servo.write(current_angle[0]);
+    arm_top_servo.write(current_angle[1]);
+    arm_middle_servo.write(current_angle[2]);
+    arm_bottom_servo.write(current_angle[3]);
 }
 //---------------------------------运动函数定义---------------------------------------
-void motor_forve_vector(const double *vector)
+void motor_forve_vector(const int* vector)
 {
     Serial.print("Analog writing: ");
     for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
@@ -89,13 +94,23 @@ void motor_forve_vector(const double *vector)
         Serial.print(", ");
     }
     Serial.print("\n");
-    analogWrite(8, vector[0]);
-    // digitalWrite(8, HIGH);
-    analogWrite(9, vector[1]);
 
-    analogWrite(11, vector[2]);
+    for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
+        int pin = voltage_pins[i];
+        int prev_v = prev_volt[i];
+        int v = voltage[i];
+        if (prev_v != v) {
+            analogWrite(pin, v);
+            prev_volt[i] = v;
+        }
+    }
+    // analogWrite(8, vector[0]);
+    // digitalWrite(8, HIGH);
+    // analogWrite(9, vector[1]);
+
+    // analogWrite(11, vector[2]);
     // digitalWrite(11, HIGH);
-    analogWrite(10, vector[3]);
+    // analogWrite(10, vector[3]);
     // for (int i = 0; i < 255; i++) {
     //     analogWrite(9, i);
     //     analogWrite(10, i);
@@ -122,27 +137,11 @@ void setup()
     pinMode(10, OUTPUT);
     pinMode(11, OUTPUT);
 
-    // Analog
-    // pinMode(14, OUTPUT);
-    // pinMode(15, OUTPUT);
-    // pinMode(16, OUTPUT);
-    // pinMode(17, OUTPUT);
-    // pinMode(18, OUTPUT);
-    // pinMode(19, OUTPUT);
-
-    // analogWrite(14, 32);
-    // analogWrite(15, 32);
-    // analogWrite(16, 32);
-    // analogWrite(17, 32);
-    // analogWrite(18, 32);
-    // analogWrite(19, 32);
-    pinMode(17, OUTPUT);
-
-    //机械手爪定义端口
-    clamp_servo.attach(2);        //手爪电机
-    arm_top_servo.attach(7);      //上臂电机
-    arm_middle_servo.attach(12);  //下臂电机
-    arm_bottom_servo.attach(13);  //底座电机
+    // //机械手爪定义端口
+    // clamp_servo.attach(2);        //手爪电机
+    // arm_top_servo.attach(7);      //上臂电机
+    // arm_middle_servo.attach(12);  //下臂电机
+    // arm_bottom_servo.attach(13);  //底座电机
 
     //手爪 Servo
     MIN[0] = 10;
@@ -164,59 +163,46 @@ void setup()
     MAX[3] = 170;
     INITANGLE[3] = 90;
 
-    //初始化电机
-    clamp_servo.easeTo(INITANGLE[0]);
-    arm_top_servo.easeTo(INITANGLE[1]);
-    arm_middle_servo.easeTo(INITANGLE[2]);
-    arm_bottom_servo.easeTo(INITANGLE[3]);
+    // //初始化电机
+    // clamp_servo.write(INITANGLE[0]);
+    // arm_top_servo.write(INITANGLE[1]);
+    // arm_middle_servo.write(INITANGLE[2]);
+    // arm_bottom_servo.write(INITANGLE[3]);
 
     current_angle[0] = INITANGLE[0];
     current_angle[1] = INITANGLE[1];
     current_angle[2] = INITANGLE[2];
     current_angle[3] = INITANGLE[3];
 
-    Serial.println("Setup finished...");
+    Serial.println(READY_FOR_MSG);
 }
 
 void loop()
 {
-    for (int i = 0; i < 255; i++) {
-        analogWrite(17, i);
-        delay(20);
-    }
-    for (int i = 255; i >= 0; i--) {
-        analogWrite(17, i);
-        delay(20);
-    }
-    // int val9 = analogRead(9);
-    // int val10 = analogRead(10);
-    // int val14 = analogRead(14);
-    // int val15 = analogRead(15);
-
-    // Serial.print(val9);
-    // Serial.print(", ");
-    // Serial.print(val10);
-    // Serial.print(", ");
-    // Serial.print(val14);
-    // Serial.print(", ");
-    // Serial.print(val15);
-    // Serial.print("\n");
     // put your main code here, to run repeatedly:
-    // Serial.println("Loop begin...");
     Serial.println("Deserialization began...");
-    ReadLoggingStream loggingStream(Serial, Serial);
-    DeserializationError error = deserializeJson(message, loggingStream);
+    // ReadLoggingStream loggingStream(Serial, Serial);
+    DeserializationError error = deserializeJson(message, Serial);
     Serial.println("Deserialization ended...");
     // Test if parsing succeeds.
     if (error) {
         Serial.print("deserializeJson() failed: ");
         Serial.println(error.f_str());
+        Serial.println(READY_FOR_MSG);
+
         return;
     }
     for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
         voltage[i] = message["voltage"][i];
     }
     motor_forve_vector(voltage);
+
+    if (Serial.available()) {
+        Serial.println("Serial busy...");
+    } else {
+        Serial.println(READY_FOR_MSG);
+    }
+    return;
 
     // TODO: Map this too...
     // switch (command) {
