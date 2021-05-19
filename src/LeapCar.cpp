@@ -3,26 +3,25 @@
 #include <ArduinoJson.h>
 #include <Servo.h>
 #include <ServoEasing.h>
-// #include <ServoTimer2.h>
 #include <StreamUtils.h>
 
-Servo clamp_servo, arm_top_servo, arm_middle_servo, arm_bottom_servo;  // create servo object to control a servo
-const int SERVOS_COUNT = 4;                                            //舵机数4个
+ServoEasing clamp_servo, arm_top_servo, arm_middle_servo, arm_bottom_servo;  // create servo object to control a servo
+const int SERVOS_COUNT = 4;                                                  //舵机数4个
 int value[SERVOS_COUNT], idle[SERVOS_COUNT], current_angle[SERVOS_COUNT], MIN[SERVOS_COUNT], MAX[SERVOS_COUNT], INITANGLE[SERVOS_COUNT], previous_angle[SERVOS_COUNT], ANA[SERVOS_COUNT];
 
-#define SERVO_UPDATE_DELAY 50
+#define SERVO_UPDATE_DELAY 20
 #define MOTOR_VOLTAGE_PIN_CNT 4
 #define MOTOR_VOLTAGE_DIGIT 3
 
 int servo_rotation_delta = 5;         // 舵机转动幅度
 int servo_bottom_rotation_delta = 2;  // 底座舵机转动幅度
 char command;                         // read the char
-DynamicJsonDocument message(256);     // json message
+DynamicJsonDocument message(2048);    // json message
 // ReadBufferingStream buffer(Serial, 64);
 char str[256];
-int voltage[MOTOR_VOLTAGE_PIN_CNT];
-int prev_volt[MOTOR_VOLTAGE_PIN_CNT];
-int voltage_pins[] = {8, 5, 6, 10};
+int voltage[MOTOR_VOLTAGE_PIN_CNT] = {0, 0, 0, 0};
+int prev_volt[MOTOR_VOLTAGE_PIN_CNT] = {0, 0, 0, 0};
+int voltage_pins[] = {8, 9, 11, 10};
 
 const char* READY_FOR_MSG = "DEVICE_READY_MESSAGE";
 
@@ -92,7 +91,7 @@ void motor_forve_vector(const int* vector)
 {
     Serial.print("Analog writing: ");
     for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
-        Serial.print(vector[i], 2);
+        Serial.print(vector[i]);
         Serial.print(", ");
     }
     Serial.print("\n");
@@ -137,13 +136,18 @@ void setup()
     //-----电机IO口定-
     for (auto pin : voltage_pins) {
         pinMode(pin, OUTPUT);
+        digitalWrite(pin, LOW);
     }
+
+    Serial.println("Motor done...");
 
     //机械手爪定义端口
     clamp_servo.attach(2);        //手爪电机
     arm_top_servo.attach(7);      //上臂电机
     arm_middle_servo.attach(12);  //下臂电机
     arm_bottom_servo.attach(13);  //底座电机
+
+    Serial.println("Clamp done...");
 
     //手爪 Servo
     MIN[0] = 10;
@@ -171,10 +175,13 @@ void setup()
     arm_middle_servo.write(INITANGLE[2]);
     arm_bottom_servo.write(INITANGLE[3]);
 
+    Serial.println("Clamp init done...");
+
     current_angle[0] = INITANGLE[0];
     current_angle[1] = INITANGLE[1];
     current_angle[2] = INITANGLE[2];
     current_angle[3] = INITANGLE[3];
+
     Serial.println(READY_FOR_MSG);
 }
 
@@ -201,26 +208,30 @@ void loop()
             Serial.println(error.f_str());
             Serial.println(READY_FOR_MSG);
 
+            for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
+                voltage[i] = 0;
+            }
+            motor_forve_vector(voltage);
             return;
-        }
+        } else {
+            for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
+                voltage[i] = int(double(message["voltage"][i]));
+            }
 
-        for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
-            voltage[i] = message["voltage"][i];
+            // //! assuming a line structure as: 000255000255 for voltage
+            // //! removing trailing linebreak
+            // if (str.length() == MOTOR_VOLTAGE_PIN_CNT * MOTOR_VOLTAGE_DIGIT) {
+            //     Serial.println("Length confirmed");
+            //     for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
+            //         voltage[i] = str.substring(i * MOTOR_VOLTAGE_DIGIT, (i + 1) * MOTOR_VOLTAGE_DIGIT).toInt();
+            //     }
+            // } else {
+            //     Serial.print("Length Error: ");
+            //     Serial.print(str.length());
+            //     Serial.print("\n");
+            // }
+            motor_forve_vector(voltage);
         }
-
-        // //! assuming a line structure as: 000255000255 for voltage
-        // //! removing trailing linebreak
-        // if (str.length() == MOTOR_VOLTAGE_PIN_CNT * MOTOR_VOLTAGE_DIGIT) {
-        //     Serial.println("Length confirmed");
-        //     for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
-        //         voltage[i] = str.substring(i * MOTOR_VOLTAGE_DIGIT, (i + 1) * MOTOR_VOLTAGE_DIGIT).toInt();
-        //     }
-        // } else {
-        //     Serial.print("Length Error: ");
-        //     Serial.print(str.length());
-        //     Serial.print("\n");
-        // }
-        motor_forve_vector(voltage);
     }
 
     if (Serial.available()) {
