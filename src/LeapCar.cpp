@@ -16,14 +16,14 @@ int value[SERVOS_COUNT], idle[SERVOS_COUNT], current_angle[SERVOS_COUNT], MIN[SE
 int servo_rotation_delta = 5;         // 舵机转动幅度
 int servo_bottom_rotation_delta = 2;  // 底座舵机转动幅度
 char command;                         // read the char
-DynamicJsonDocument message(2048);    // json message
+DynamicJsonDocument message(512);     // json message
 // ReadBufferingStream buffer(Serial, 64);
 char str[256];
 int voltage[MOTOR_VOLTAGE_PIN_CNT] = {0, 0, 0, 0};
 int prev_volt[MOTOR_VOLTAGE_PIN_CNT] = {0, 0, 0, 0};
 int voltage_pins[] = {8, 9, 11, 10};
 
-const char* READY_FOR_MSG = "DEVICE_READY_MESSAGE";
+const char* READY_FOR_MSG = "OK";
 
 //---------------------------------手爪函数定义---------------------------------------
 void clamp_open()  //手爪打开
@@ -89,21 +89,23 @@ void arm_stop_all()  //停止所有舵机
 //---------------------------------运动函数定义---------------------------------------
 void motor_forve_vector(const int* vector)
 {
-    Serial.print("Analog writing: ");
-    for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
-        Serial.print(vector[i]);
-        Serial.print(", ");
-    }
-    Serial.print("\n");
+    // Serial.print("Analog writing: ");
+    // for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
+    //     Serial.print(vector[i]);
+    //     Serial.print(", ");
+    // }
+    // Serial.print("\n");
 
     for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
         int pin = voltage_pins[i];
-        int prev_v = prev_volt[i];
+        // int prev_v = prev_volt[i];
         int v = voltage[i];
-        if (prev_v != v) {
-            analogWrite(pin, v);
-            prev_volt[i] = v;
-        }
+        // if (prev_v != v) {
+        //     analogWrite(pin, v);
+        //     prev_volt[i] = v;
+        // }
+
+        analogWrite(pin, v);
     }
     // analogWrite(8, vector[0]);
     // digitalWrite(8, HIGH);
@@ -190,56 +192,88 @@ void loop()
     // put your main code here, to run repeatedly:
     // Serial.println("Loop begin...");
 
+    unsigned long start = micros();
     if (Serial.available() > 0) {
-        String str = Serial.readStringUntil('\n');
-        Serial.print("Serial Echo: ");
-        Serial.print(str);
-        Serial.print("\n");
-        Serial.println("Deserialization began...");
+        // String str = Serial.readStringUntil('\n');
+
+        Serial.readBytes(str, MOTOR_VOLTAGE_PIN_CNT);
+
+        // Serial.print("Serial Echo: ");
+        // Serial.print(str);
+        // Serial.print("\n");
+        // Serial.println("Deserialization began...");
+
         // ReadLoggingStream loggingStream(Serial, Serial);
-        // DeserializationError error = deserializeJson(message, Serial);
-        DeserializationError error = deserializeJson(message, str);
-        Serial.println("Deserialization ended...");
+        // DeSerializationError error = deSerializeJson(message, Serial);
+        // DeserializationError error = deserializeJson(message, str);
+        // DeserializationError error;
+
+        // deserializeJson(message, str);
+
+        // Serial.println("Deserialization ended...");
         // Test if parsing succeeds.
-        if (error) {
-            Serial.print("deserializeJson() failed: ");
-            while (Serial.available() > 0)
-                Serial.read();
-            Serial.println(error.f_str());
-            Serial.println(READY_FOR_MSG);
 
-            for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
-                voltage[i] = 0;
-            }
-            motor_forve_vector(voltage);
-            return;
-        } else {
-            for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
-                voltage[i] = int(double(message["voltage"][i]));
-            }
+        // unsigned long de_end = micros();
 
-            // //! assuming a line structure as: 000255000255 for voltage
-            // //! removing trailing linebreak
-            // if (str.length() == MOTOR_VOLTAGE_PIN_CNT * MOTOR_VOLTAGE_DIGIT) {
-            //     Serial.println("Length confirmed");
-            //     for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
-            //         voltage[i] = str.substring(i * MOTOR_VOLTAGE_DIGIT, (i + 1) * MOTOR_VOLTAGE_DIGIT).toInt();
-            //     }
-            // } else {
-            //     Serial.print("Length Error: ");
-            //     Serial.print(str.length());
-            //     Serial.print("\n");
-            // }
-            motor_forve_vector(voltage);
+        // Serial.print("Deserialization took: ");
+        // Serial.print((de_end - start) / 1000000.0, 6);
+        // Serial.print("\n");
+
+        // if (error) {
+        //     // Serial.print("deserializeJson() failed: ");
+
+        //     // Serial.println(error.f_str());
+        //     // Serial.println(READY_FOR_MSG);
+
+        //     for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
+        //         voltage[i] = 0;
+        //     }
+        //     motor_forve_vector(voltage);
+        //     return;
+        // }
+        // for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
+        //     voltage[i] = int((message["voltage"][i]));
+        // }
+        // //! assuming a line structure as: 000255000255 for voltage
+        // //! removing trailing linebreak
+        // Serial.println("Length confirmed");
+        for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
+            voltage[i] = str[i];
         }
-    }
+        //  else {
+        //     Serial.print("Length Error: ");
+        //     Serial.print(str.length());
+        //     Serial.print("\n");
+        // }
+        motor_forve_vector(voltage);
 
-    if (Serial.available()) {
-        Serial.println("Serial busy...");
+        // unsigned long mo_end = micros();
+
+        // Serial.print("Motor took: ");
+        // Serial.print((mo_end - start) / 1000000.0, 6);
+        // Serial.print("\n");
     } else {
         Serial.println(READY_FOR_MSG);
     }
+
+    // if (Serial.available()) {
+    //     // Serial.println("Serial busy...");
+    //     // while (Serial.available() > 0)
+    //     //     Serial.read();
+    // } else {
+    //     Serial.println(READY_FOR_MSG);
+
+    // }
     // Serial.println(READY_FOR_MSG);
+    unsigned long end = micros();
+    double time = (end - start) / 1000000.0;
+    // Serial.print("Loop time: ");
+    // Serial.print(time, 6);
+    // Serial.print("\n");
+    Serial.print("FPS:");
+    Serial.print(1 / time, 4);
+    Serial.print("\n");
+
     return;
 
     // TODO: Map this too...
