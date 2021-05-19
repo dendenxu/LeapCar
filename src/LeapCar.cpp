@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <Servo.h>
-// #include <ServoEasing.h>
+#include <ServoEasing.h>
 // #include <ServoTimer2.h>
 #include <StreamUtils.h>
 
@@ -12,17 +12,19 @@ int value[SERVOS_COUNT], idle[SERVOS_COUNT], current_angle[SERVOS_COUNT], MIN[SE
 
 #define SERVO_UPDATE_DELAY 50
 #define MOTOR_VOLTAGE_PIN_CNT 4
+#define MOTOR_VOLTAGE_DIGIT 3
 
 int servo_rotation_delta = 5;         // 舵机转动幅度
 int servo_bottom_rotation_delta = 2;  // 底座舵机转动幅度
 char command;                         // read the char
 DynamicJsonDocument message(256);     // json message
+// ReadBufferingStream buffer(Serial, 64);
 char str[256];
 int voltage[MOTOR_VOLTAGE_PIN_CNT];
 int prev_volt[MOTOR_VOLTAGE_PIN_CNT];
-int voltage_pins[] = {8, 9, 11, 10};
+int voltage_pins[] = {8, 5, 6, 10};
 
-const char* READY_FOR_MSG = "{ \"ready\": true }";
+const char* READY_FOR_MSG = "DEVICE_READY_MESSAGE";
 
 //---------------------------------手爪函数定义---------------------------------------
 void clamp_open()  //手爪打开
@@ -131,17 +133,17 @@ void setup()
         continue;
     Serial.println("Serial setup");
     Serial.println("Setup begin...");
-    //-----电机IO口定-
-    pinMode(8, OUTPUT);
-    pinMode(9, OUTPUT);
-    pinMode(10, OUTPUT);
-    pinMode(11, OUTPUT);
 
-    // //机械手爪定义端口
-    // clamp_servo.attach(2);        //手爪电机
-    // arm_top_servo.attach(7);      //上臂电机
-    // arm_middle_servo.attach(12);  //下臂电机
-    // arm_bottom_servo.attach(13);  //底座电机
+    //-----电机IO口定-
+    for (auto pin : voltage_pins) {
+        pinMode(pin, OUTPUT);
+    }
+
+    //机械手爪定义端口
+    clamp_servo.attach(2);        //手爪电机
+    arm_top_servo.attach(7);      //上臂电机
+    arm_middle_servo.attach(12);  //下臂电机
+    arm_bottom_servo.attach(13);  //底座电机
 
     //手爪 Servo
     MIN[0] = 10;
@@ -163,45 +165,70 @@ void setup()
     MAX[3] = 170;
     INITANGLE[3] = 90;
 
-    // //初始化电机
-    // clamp_servo.write(INITANGLE[0]);
-    // arm_top_servo.write(INITANGLE[1]);
-    // arm_middle_servo.write(INITANGLE[2]);
-    // arm_bottom_servo.write(INITANGLE[3]);
+    //初始化电机
+    clamp_servo.write(INITANGLE[0]);
+    arm_top_servo.write(INITANGLE[1]);
+    arm_middle_servo.write(INITANGLE[2]);
+    arm_bottom_servo.write(INITANGLE[3]);
 
     current_angle[0] = INITANGLE[0];
     current_angle[1] = INITANGLE[1];
     current_angle[2] = INITANGLE[2];
     current_angle[3] = INITANGLE[3];
-
     Serial.println(READY_FOR_MSG);
 }
 
 void loop()
 {
     // put your main code here, to run repeatedly:
-    Serial.println("Deserialization began...");
-    // ReadLoggingStream loggingStream(Serial, Serial);
-    DeserializationError error = deserializeJson(message, Serial);
-    Serial.println("Deserialization ended...");
-    // Test if parsing succeeds.
-    if (error) {
-        Serial.print("deserializeJson() failed: ");
-        Serial.println(error.f_str());
-        Serial.println(READY_FOR_MSG);
+    // Serial.println("Loop begin...");
 
-        return;
+    if (Serial.available() > 0) {
+        String str = Serial.readStringUntil('\n');
+        Serial.print("Serial Echo: ");
+        Serial.print(str);
+        Serial.print("\n");
+        Serial.println("Deserialization began...");
+        // ReadLoggingStream loggingStream(Serial, Serial);
+        // DeserializationError error = deserializeJson(message, Serial);
+        DeserializationError error = deserializeJson(message, str);
+        Serial.println("Deserialization ended...");
+        // Test if parsing succeeds.
+        if (error) {
+            Serial.print("deserializeJson() failed: ");
+            while (Serial.available() > 0)
+                Serial.read();
+            Serial.println(error.f_str());
+            Serial.println(READY_FOR_MSG);
+
+            return;
+        }
+
+        for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
+            voltage[i] = message["voltage"][i];
+        }
+
+        // //! assuming a line structure as: 000255000255 for voltage
+        // //! removing trailing linebreak
+        // if (str.length() == MOTOR_VOLTAGE_PIN_CNT * MOTOR_VOLTAGE_DIGIT) {
+        //     Serial.println("Length confirmed");
+        //     for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
+        //         voltage[i] = str.substring(i * MOTOR_VOLTAGE_DIGIT, (i + 1) * MOTOR_VOLTAGE_DIGIT).toInt();
+        //     }
+        // } else {
+        //     Serial.print("Length Error: ");
+        //     Serial.print(str.length());
+        //     Serial.print("\n");
+        // }
+        motor_forve_vector(voltage);
     }
-    for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
-        voltage[i] = message["voltage"][i];
-    }
-    motor_forve_vector(voltage);
 
     if (Serial.available()) {
         Serial.println("Serial busy...");
     } else {
         Serial.println(READY_FOR_MSG);
     }
+    // Serial.println(READY_FOR_MSG);
     return;
 
     // TODO: Map this too...
