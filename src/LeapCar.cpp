@@ -8,7 +8,7 @@ const int SERVOS_COUNT = 4;                                                  //è
 int value[SERVOS_COUNT], idle[SERVOS_COUNT], current_angle[SERVOS_COUNT], MIN[SERVOS_COUNT], MAX[SERVOS_COUNT], INITANGLE[SERVOS_COUNT], previous_angle[SERVOS_COUNT], ANA[SERVOS_COUNT];
 
 #define SERVO_UPDATE_DELAY 20
-#define SERVO_PIN_CNT 3
+#define SERVO_PIN_CNT 4
 #define MOTOR_VOLTAGE_PIN_CNT 4
 #define MOTOR_VOLTAGE_DIGIT 3
 
@@ -94,9 +94,13 @@ void motor_forve_vector(const char* vector)
 
 void servo_angle_vector(const char* angle)
 {
-    arm_middle_servo.write(angle[0]);
-    arm_top_servo.write(angle[1]);
-    clamp_servo.write(angle[2]);
+    if (angle[0] == 63)
+        bottom_rotate_right();
+    if (angle[0] == 127)
+        bottom_rotate_left();
+    arm_middle_servo.write(angle[1]);
+    arm_top_servo.write(angle[2]);
+    clamp_servo.write(angle[3]);
 }
 
 void setup()
