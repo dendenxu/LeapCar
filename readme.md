@@ -2,6 +2,9 @@
 
 This is the Arduino side implementation for our Leap Motion Controlled Armed Car Project... That's a long name...
 
+- `src/LeapCar.cpp`: the main file for the Arduino side implementation
+- `platformio.ini`: setting file for PlatformIO, defines board type and stuff...
+
 ## Quick Start
 
 - Make sure you have **Visual Studio Code** installed.
@@ -25,7 +28,7 @@ This is the Arduino side implementation for our Leap Motion Controlled Armed Car
 
 ## Important
 
-For f***'s sake, the `Servo` library doesn't work with `analogWrite` since they both uses the arduino timer. What a giant mess...
+For \*\*\*\*'s sake, the `Servo` library doesn't work with `analogWrite` since they both uses the arduino timer. What a giant mess...
 
 Now we can temporarily fix that by some freaking hacking modifications.
 
@@ -45,7 +48,7 @@ You only need to modify the first `ServoTimers.h` since only that uses our archi
 
 I'm using Visual Studio Code so it highlights the defined and undefined stuff...
 
-In `ServoTimers.h` change this `_useTimer1` to `_useTimer2`
+In `ServoTimers.h` change this `_useTimer1` to `_useTimer3` and update `_timer1` to `_timer3`
 
 ![image-20210514120626750](readme.assets/image-20210514120626750.png)
 
