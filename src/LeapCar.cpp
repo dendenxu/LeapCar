@@ -94,10 +94,13 @@ void motor_forve_vector(const char* vector)
 
 void servo_angle_vector(const char* angle)
 {
+    /**********
     if (angle[0] == 63)
         bottom_rotate_right();
     if (angle[0] == 127)
         bottom_rotate_left();
+    *******/
+    arm_bottom_srvo.write(angle[0]);
     arm_middle_servo.write(angle[1]);
     arm_top_servo.write(angle[2]);
     clamp_servo.write(angle[3]);
