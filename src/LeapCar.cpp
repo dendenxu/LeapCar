@@ -14,76 +14,14 @@ int value[SERVOS_COUNT], idle[SERVOS_COUNT], current_angle[SERVOS_COUNT], MIN[SE
 
 int servo_rotation_delta = 5;         // 舵机转动幅度
 int servo_bottom_rotation_delta = 2;  // 底座舵机转动幅度
-char str[256];
+unsigned char str[256];
 // int buffer[MOTOR_VOLTAGE_PIN_CNT] = {0, 0, 0, 0};
 // int angle[SERVO_PIN_CNT] = {0, 0};
 int voltage_pins[] = {8, 9, 11, 10};
 
 const char* READY_FOR_MSG = "OK";
-
-//---------------------------------手爪函数定义---------------------------------------
-void clamp_open()  //手爪打开
-{
-    clamp_servo.write(MAX[0]);
-    delay(300);
-}
-
-void clamp_close()
-{
-    clamp_servo.write(MIN[0]);  //手爪闭合
-    delay(300);
-}
-void bottom_rotate_left()  // 底座左转
-{
-    if (current_angle[3] + servo_bottom_rotation_delta < MAX[3]) {
-        current_angle[3] += servo_bottom_rotation_delta;
-    }
-    arm_bottom_servo.write(current_angle[3]);
-}
-
-void bottom_rotate_right()  // 底座右转
-{
-    if (current_angle[3] - servo_bottom_rotation_delta > MIN[3])
-        current_angle[3] -= servo_bottom_rotation_delta;
-    arm_bottom_servo.write(current_angle[3]);
-}
-
-void arm_top_up()  //上臂舵机向上
-{
-    if (current_angle[1] + servo_rotation_delta < MAX[1])
-        current_angle[1] += servo_rotation_delta;
-    arm_top_servo.write(current_angle[1]);
-}
-
-void arm_top_down()  //上臂舵机向下
-{
-    if (current_angle[1] - servo_rotation_delta > MIN[1])
-        current_angle[1] -= servo_rotation_delta;
-    arm_top_servo.write(current_angle[1]);
-}
-
-void arm_middle_up()  //下臂舵机上升
-{
-    if (current_angle[2] - servo_rotation_delta > MIN[2])
-        current_angle[2] -= servo_rotation_delta;
-    arm_middle_servo.write(current_angle[2]);
-}
-
-void arm_middle_down()  //下臂舵机下降
-{
-    if (current_angle[2] + servo_rotation_delta < MAX[2])
-        current_angle[2] += servo_rotation_delta;
-    arm_middle_servo.write(current_angle[2]);
-}
-void arm_stop_all()  //停止所有舵机
-{
-    clamp_servo.write(current_angle[0]);
-    arm_top_servo.write(current_angle[1]);
-    arm_middle_servo.write(current_angle[2]);
-    arm_bottom_servo.write(current_angle[3]);
-}
 //---------------------------------运动函数定义---------------------------------------
-void motor_forve_vector(const char* vector)
+void motor_forve_vector(const unsigned char* vector)
 {
     for (int i = 0; i < MOTOR_VOLTAGE_PIN_CNT; i++) {
         int pin = voltage_pins[i];
@@ -92,7 +30,7 @@ void motor_forve_vector(const char* vector)
     }
 }
 
-void servo_angle_vector(const char* angle)
+void servo_angle_vector(const unsigned char* angle)
 {
     /**********
     if (angle[0] == 63)
@@ -100,10 +38,10 @@ void servo_angle_vector(const char* angle)
     if (angle[0] == 127)
         bottom_rotate_left();
     *******/
-    arm_bottom_srvo.write(angle[0]);
-    arm_middle_servo.write(angle[1]);
-    arm_top_servo.write(angle[2]);
-    clamp_servo.write(angle[3]);
+    arm_bottom_servo.startEaseTo(angle[0]);
+    arm_middle_servo.startEaseTo(angle[1]);
+    arm_top_servo.startEaseTo(angle[2]);
+    clamp_servo.startEaseTo(angle[3]);
 }
 
 void setup()
@@ -152,10 +90,18 @@ void setup()
     INITANGLE[3] = 90;
 
     //初始化电机
+    clamp_servo.setSpeed(360);
     clamp_servo.write(INITANGLE[0]);
+    clamp_servo.setEasingType(EASE_CUBIC_IN_OUT);
+    arm_top_servo.setSpeed(360);
     arm_top_servo.write(INITANGLE[1]);
+    arm_top_servo.setEasingType(EASE_CUBIC_IN_OUT);
+    arm_middle_servo.setSpeed(360);
     arm_middle_servo.write(INITANGLE[2]);
+    arm_middle_servo.setEasingType(EASE_CUBIC_IN_OUT);
+    arm_bottom_servo.setSpeed(360);
     arm_bottom_servo.write(INITANGLE[3]);
+    arm_bottom_servo.setEasingType(EASE_CUBIC_IN_OUT);
 
     Serial2.println("Clamp init done...");
 
